@@ -33,7 +33,7 @@ Any relevant automation scripts will be written in Python, placed in the repo, a
 - Citrine has/will have a QuickSight Enterprise account. This will be required in order to connect QuickSight to a VPC—through an Elastic Network Interface (ENI)—and keep network traffic private within the AWS network
 
 ## Questions:
-- Does Citrine have Amazon RDS or Amazon Redshift in the same Region and do they use cross-account resource sharing for their VPCs? Different accounts/regions
+- Does Citrine have Amazon RDS or Amazon Redshift in the same Region and do they use cross-account resource sharing for their VPCs? RDS + different accounts/regions
 - Does Citrine use AWS Organizations? Yes
 - Does Citrine use VPC peering or a Transit Gateway to communicate between existing VPCs or neither?
 - Does Citrine use more than one region? Yes
