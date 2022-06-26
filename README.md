@@ -78,8 +78,27 @@ If you encounter a _Public Hostnames are disabled for: vpc-_, follow these steps
 - you will have to change accounts to validate both properties
 - you can validate these settings in the console as well by going to VPC => Peering Connections, select each peering connection id and verify the settings on the DNS tab.
 
-5. update the route tables
+5. update the route tables in both the QuickSight VPC and data source VPC to route network traffic between them
 
+## isseues here with overlapping CIDRs which is probably going to invalidate the VPC peering approach...waiting on clarification
+
+- from QuickSight => data source peering connection
+- `aws ec2 create-route --route-table-id *amazon quicksight subnet route table id* --destination-cidr-block *data source vpc cidr* --vpc-peering-connection-id *the id of the peering you created above*`
+
+- from RDS VPCs => QuickSight VPC
+- `aws ec2 create-route --route-table-id *data source subnet route table id* --destination-cidr-block *quicksight vpc cidr* --vpc-peering-connection-id *the id of the peering you created above*`
+
+
+6. in the QuickSight AWS account, run the following command:
+- `aws ec2 authorize-security-group-ingress --group-id *quicksight security group* --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=*data source subnet CIDR*}]`
+
+
+7. in the data source AWS account, run the following command
+- `aws ec2 authorize-security-group-ingress --group-id *data source security group* --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=*quicksight subnet CIDR*}]`
+
+### End VPC peering connections
+
+## Connect QuickSight to the data source
 
 ## AWS CLI named profiles
 using the CLI against multiple AWS accounts can be cumbersome and time-consuming. named profiles can help.
