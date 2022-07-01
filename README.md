@@ -4,6 +4,8 @@
 
 _Apply Citrine-specific naming conventions for tags, etc._
 
+## Prepare the QuickSight Environment
+
 1. create a VPC and a subnet in the Region where your QuickSight account is deployed.
 
    ```powershell
@@ -45,18 +47,23 @@ _Apply Citrine-specific naming conventions for tags, etc._
      --subnet-id subnetId
    ```
 
-## Now you configure QuickSight to create a VPC connection in the subnet you just created.
+### Now you configure QuickSight to create a VPC connection in the subnet you just created.
 
 5. Sign in to the QuickSight console with administrator privileges.
 6. Choose your profile icon and choose **Manage QuickSight**.
+![QuickSight UI](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/09/QS-ManageQuickisight-1024x515.png)
 7. On the Manage QuickSight console, in the left panel, choose Manage VPC Connections.
 8. Choose Add VPC Connection.
 9. Provide the VPC ID, subnet ID, and security group ID you created earlier.
 10. You can leave DNS resolver endpoints empty unless you have a private DNS deployment in the VPC.
 
-## set up the data source infrastructure
+You have now enabled QuickSight to access a subnet in your VPC. The following diagram shows the infrastructure you deployed.
 
-### VPC peering connections
+![QucikSight VPC diagram](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/10/QS-ENI-1.png)
+
+## Set up the data source infrastructure
+
+### VPC peering
 
 [VPC peering limitations](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html#vpc-peering-limitations)
 
@@ -91,7 +98,7 @@ _Apply Citrine-specific naming conventions for tags, etc._
 
 - [modify-vpc-peering-connection-options](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-peering-connection-options.html)
 
-#### accepter
+  #### accepter - enable DNS resolution
 
    ```powershell 
    aws ec2 modify-vpc-peering-connection-options \
@@ -99,7 +106,7 @@ _Apply Citrine-specific naming conventions for tags, etc._
      --accepter-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
-#### requestor
+  #### requestor
 
    ```powershell
    aws ec2 modify-vpc-peering-connection-options \
@@ -107,7 +114,7 @@ _Apply Citrine-specific naming conventions for tags, etc._
      --requester-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
-   If you encounter a _Public Hostnames are disabled for: vpc-_, follow these steps to enable DNS hostnames for each VPC
+   If you encounter a **_Public Hostnames are disabled for: vpc-_** error, follow these steps to enable DNS hostnames for each VPC and then return to the modify-vpc-peering-connection-options commands above to enable DNS resolution
    [modify-vpc-attribute](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/modify-vpc-attribute.html)
 
    ```powershell
@@ -132,9 +139,9 @@ _Apply Citrine-specific naming conventions for tags, etc._
    aws ec2 describe-vpc-peering-connections \
      --filters Name=status-code,Values=active
    ```
-- ensure the PeeringOptions object's AllowDnsResolutionFromRemoteVpc property is true for both the accepter and requester
-- you will have to change accounts to validate both properties
-- you can validate these settings in the console as well by going to VPC => Peering Connections, select each peering connection id and verify the settings on the DNS tab.
+    - ensure the PeeringOptions object's AllowDnsResolutionFromRemoteVpc property is true for both the accepter and requester
+    - you will have to change accounts to validate both properties
+    - you can validate these settings in the console as well by going to VPC => Peering Connections, select each peering connection id and verify the settings on the DNS tab.    
 
 5. update the route tables in both the QuickSight VPC and data source VPC to route network traffic between them
 
@@ -172,7 +179,26 @@ _Apply Citrine-specific naming conventions for tags, etc._
      --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=*quicksight subnet CIDR*}]
    ```
 
+  ![VPC peering diagram](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/10/QS-Peering-1.png)
+
 ## Connect QuickSight to the data source
+
+Now that you have established the network link and configured both QuickSight and the data source to accept incoming and outgoing network traffic, you set up QuickSight to connect to the data source.
+
+1. On the QuickSight console, choose Datasets in the navigation pane.
+2. Choose **Add a dataset**.
+3. Choose your database engine...PostgreSQL.
+   Do not choose Amazon RDS or Amazon Redshift auto-discover.
+4. For **Connection type**, choose the VPC connection you created.
+5. Provide the necessary information about your database server.
+6. Choose **Validate connection** button to make sure QuickSight can connect to the data source.
+7. Choose **Create data source**.
+
+![configure the data source](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/09/QS-Add-Source-UI-1024x519.png)
+
+8. Choose the database you want to use and select the table.
+
+You’re now ready to build your dashboards and reports.
 
 ## AWS CLI named profiles
 
