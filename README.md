@@ -10,7 +10,7 @@ _Apply Citrine-specific naming conventions for tags, etc._
 
    ```powershell
    aws ec2 create-vpc \
-     --cidr-block CIDR block different than rds vpcs \
+     --cidr-block CIDR block different than where rds is deployed \
      --tag-specifications ResourceType=vpc,Tags=[{Key=Name,Value=QuickSightVPC}]
    ```
 
@@ -18,8 +18,8 @@ _Apply Citrine-specific naming conventions for tags, etc._
 
    ```powershell
    aws ec2 create-subnet \
-     --vpc-id  \
-     --cidr-block  \
+     --vpc-id ID of the VPC you created above \
+     --cidr-block subnet cidr block within your VPC range \
      --tag-specifications ResourceType=subnet,Tags=[{Key=Name,Value=QuickSightSubnet}]
    ```
 
@@ -29,7 +29,7 @@ _Apply Citrine-specific naming conventions for tags, etc._
    aws ec2 create-security-group \
      --group-name QuickSightSG \
      --description "QuickSight security group" \
-     --vpc-id *vpc id* \
+     --vpc-id ID of the VPC you created above \
      --tag-specifications ResourceType=security-group,Tags=[{Key=Name,Value=QuickSightSG}]
    ```
 
@@ -37,14 +37,14 @@ _Apply Citrine-specific naming conventions for tags, etc._
 
    ```powershell 
    aws ec2 create-route-table \
-     --vpc-id \ 
+     --vpc-id ID of the VPC you created above \ 
      --tag-specifications ResourceType=route-table,Tags=[{Key=Name,Value=QuickSightRouteTable}]
    ```
 
    ```powershell 
    aws ec2 associate-route-table \
-     --route-table-id routeTableId \
-     --subnet-id subnetId
+     --route-table-id id of route table created above \
+     --subnet-id subnet id created above
    ```
 
 ### Now you configure QuickSight to create a VPC connection in the subnet you just created.
@@ -65,6 +65,8 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
 ### VPC peering
 
+**A peering request will need to be intiated from the QuickSight VPC to each of the RDS VPCs.**
+
 [VPC peering limitations](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html#vpc-peering-limitations)
 
 #### using the AWS console
@@ -79,10 +81,10 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell 
    aws ec2 create-vpc-peering-connection \
-     --vpc-id *your vpc id* \
-     --peer-vpc-id *your peer vpc id* \
-     --peer-owner-id *your peer owner id* \
-     --peer-region *the peer region*
+     --vpc-id your vpc id \
+     --peer-vpc-id your peer vpc id \
+     --peer-owner-id your peer owner id \
+     --peer-region the peer region
    ```
 
 2. accepting the peering connection request
@@ -91,7 +93,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
    
    ```powershell 
    aws ec2 accept-vpc-peering-connection \
-     --vpc-peering-connection-id *VpcPeeringConnectionId from the create command response*
+     --vpc-peering-connection-id VpcPeeringConnectionId from the create command response
    ```
 
 3. modifying the peering connections to enable DNS resolution
@@ -102,7 +104,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell 
    aws ec2 modify-vpc-peering-connection-options \
-     --vpc-peering-connection-id *VpcPeeringConnectionId from the accept command response* \
+     --vpc-peering-connection-id VpcPeeringConnectionId from the accept command response \
      --accepter-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
@@ -110,7 +112,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell
    aws ec2 modify-vpc-peering-connection-options \
-     --vpc-peering-connection-id *VpcPeeringConnectionId from the accept command response* \
+     --vpc-peering-connection-id VpcPeeringConnectionId from the accept command response \
      --requester-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
@@ -119,7 +121,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell
    aws ec2 modify-vpc-attribute \
-     --vpc-id *your vpc id* \
+     --vpc-id vpc id \
      --enable-dns-hostnames
    ```
 
@@ -127,7 +129,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell
    aws ec2 describe-vpc-attribute \
-     --vpc-id _your vpc id_ \
+     --vpc-id vpc id \
      --attribute enableDnsHostnames
    ```
 
@@ -149,34 +151,34 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
    ```powershell 
    aws ec2 create-route \
-     --route-table-id *quicksight subnet route table id* \
-     --destination-cidr-block *data source vpc cidr* \
-     --vpc-peering-connection-id *the id of the peering you created above*
+     --route-table-id quicksight subnet route table id \
+     --destination-cidr-block data source vpc cidr \
+     --vpc-peering-connection-id the id of the peering you created above
    ```
 
 - from RDS VPCs => QuickSight VPC
 
    ```powershell 
    aws ec2 create-route \
-     --route-table-id *data source subnet route table id* \
-     --destination-cidr-block *quicksight vpc cidr* \
-     --vpc-peering-connection-id *the id of the peering you created above*
+     --route-table-id data source subnet route table id \
+     --destination-cidr-block quicksight vpc cidr \
+     --vpc-peering-connection-id the id of the peering you created above
    ```
 
 6. in the QuickSight AWS account, run the following command:
 
    ```powershell 
    aws ec2 authorize-security-group-ingress \
-     --group-id *quicksight security group* \
-     --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=*data source subnet CIDR*}]
+     --group-id quicksight security group \
+     --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=data source subnet cidr}]
    ```
 
 7. in the data source AWS account, run the following command
 
    ```powershell 
    aws ec2 authorize-security-group-ingress \
-     --group-id *data source security group* \
-     --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=*quicksight subnet CIDR*}]
+     --group-id data source security group \
+     --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=quicksight subnet cidr}]
    ```
 
   ![VPC peering diagram](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/10/QS-Peering-1.png)
