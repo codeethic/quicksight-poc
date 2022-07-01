@@ -108,7 +108,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
      --accepter-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
-      #### requestor
+      #### requestor - enable DNS resolution
 
    ```powershell
    aws ec2 modify-vpc-peering-connection-options \
