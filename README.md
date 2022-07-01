@@ -1,8 +1,8 @@
-# quicksight-poc
+# Citrine - QuickSight Proof of Concept
 
 [Amazon QuickSight deployment models for cross-account and cross-Region access to Amazon Redshift and Amazon RDS](https://aws.amazon.com/blogs/big-data/amazon-quicksight-deployment-models-for-cross-account-and-cross-region-access-to-amazon-redshift-and-amazon-rds/)
 
-_Apply Citrine-specific naming conventions for tags, etc._
+**_Apply Citrine-specific naming conventions for tags, etc._**
 
 ## Prepare the QuickSight Environment
 
@@ -77,7 +77,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
 1. creating the peering connection request
 
-- [create-vpc-peering-connection](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-peering-connection.html)
+    [create-vpc-peering-connection](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-peering-connection.html)
 
    ```powershell 
    aws ec2 create-vpc-peering-connection \
@@ -89,7 +89,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
 2. accepting the peering connection request
 
-- [accept-vpc-peering-connection](https://docs.aws.amazon.com/cli/latest/reference/ec2/accept-vpc-peering-connection.html)
+    [accept-vpc-peering-connection](https://docs.aws.amazon.com/cli/latest/reference/ec2/accept-vpc-peering-connection.html)
    
    ```powershell 
    aws ec2 accept-vpc-peering-connection \
@@ -98,9 +98,9 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
 3. modifying the peering connections to enable DNS resolution
 
-- [modify-vpc-peering-connection-options](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-peering-connection-options.html)
+    [modify-vpc-peering-connection-options](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-peering-connection-options.html)
 
-  #### accepter - enable DNS resolution
+      #### accepter - enable DNS resolution
 
    ```powershell 
    aws ec2 modify-vpc-peering-connection-options \
@@ -108,7 +108,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
      --accepter-peering-connection-options AllowDnsResolutionFromRemoteVpc=true
    ```
 
-  #### requestor
+      #### requestor
 
    ```powershell
    aws ec2 modify-vpc-peering-connection-options \
@@ -125,7 +125,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
      --enable-dns-hostnames
    ```
 
-   [describe-vpc-attribute](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-vpc-attribute.html)
+      [describe-vpc-attribute](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-vpc-attribute.html)
 
    ```powershell
    aws ec2 describe-vpc-attribute \
@@ -147,7 +147,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
 
 5. update the route tables in both the QuickSight VPC and data source VPC to route network traffic between them
 
-- from QuickSight => data source peering connection
+    **from QuickSight => data source peering connection**
 
    ```powershell 
    aws ec2 create-route \
@@ -156,7 +156,7 @@ You have now enabled QuickSight to access a subnet in your VPC. The following di
      --vpc-peering-connection-id the id of the peering you created above
    ```
 
-- from RDS VPCs => QuickSight VPC
+    **from RDS VPCs => QuickSight VPC**
 
    ```powershell 
    aws ec2 create-route \
@@ -204,7 +204,6 @@ You’re now ready to build your dashboards and reports.
 
 ## AWS CLI named profiles
 
-using the CLI against multiple AWS accounts can be cumbersome and time-consuming. named profiles can help.
+using the CLI against multiple AWS accounts can be cumbersome and time-consuming. [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) can help.
 
-[named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
 [config and credential file settings](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings)
