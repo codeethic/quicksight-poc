@@ -59,13 +59,13 @@
 
 You have now enabled QuickSight to access a subnet in your VPC. The following diagram shows the infrastructure you deployed.
 
-![QucikSight VPC diagram](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/10/QS-ENI-1.png)
+![QuickSight VPC diagram](https://d2908q01vomqb2.cloudfront.net/b6692ea5df920cad691c20319a6fffd7a4a766b8/2021/09/10/QS-ENI-1.png)
 
 ## Set up the data source infrastructure
 
 ### VPC peering
 
-**A peering request will need to be intiated from the QuickSight VPC to each of the RDS VPCs.**
+**A peering request will need to be initiated from the QuickSight VPC to each of the RDS VPCs.**
 
 [VPC peering limitations](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html#vpc-peering-limitations)
 
