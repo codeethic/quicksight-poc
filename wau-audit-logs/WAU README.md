@@ -47,6 +47,8 @@
 
 ### Redshift Serverless Instance
 
+#### ***Note: Redshift Serverless instances require at least 3 AZs. Ensure your VPC/subnets are configured appropriately or you will not be able to proceed with creating the instance.***
+
 - https://docs.aws.amazon.com/redshift/latest/mgmt/serverless-workgroup-namespace.html
 - Some discussion is probably needed here such that we can create a meaningful workgroup and namespace configuration.
   - The workgroup manages compute, networking, and security. It's also the level at which you connect via JDBC, etc.
