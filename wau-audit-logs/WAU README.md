@@ -15,8 +15,30 @@
 
 ### IAM Role
 
-- Create a new IAM role that the lambda function can assume, unless one exists that should be used.
+- Creation of the Lambda will create an IAM role automatically with the AWSLambdaBasicExecutionRole policy that will limit permissions per the JSON below. The downside is that it auto-generates a role name with a GUID appended which may not be desirable.
+- If you choose to explicitly create a new IAM role that the lambda function can assume, ensure you assign the required policies and permissions accordingly.
 - Required policies: AWSLambdaBasicExecutionRole, AWSGlueServiceRole.
+- Specific permissions for the AWSLambdaBasicExecutionRole
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "logs:CreateLogGroup",
+      "Resource": "arn:aws:logs:us-east-2:awsAccountNumber:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": [
+        "arn:aws:logs:us-east-2:awsAccountNumber:log-group:/aws/lambda/invoke-wau-audit-logs-glue-job:*"
+      ]
+    }
+  ]
+}
+```
 
 ### S3
 
@@ -101,7 +123,7 @@
 
 ### Lambda
 
-- Select the lambda IAM role created above.
+- Select the Lambda IAM role created above or allow the role to be auto-generated.
 - Code changes: update the name of the file indicating the aggregation process is complete and the Glue job name. probably shouldn't be hardcoded.
 
 ```python
