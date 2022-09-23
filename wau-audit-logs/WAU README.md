@@ -45,6 +45,53 @@
 - Create a new S3 bucket with two folders, one named csv and the other complete (or something else that indicates the audit log file aggregation process is finished).
 - **Having the two folders allows us to target the csv folder specifically in our crawler's S3 data source configuration so that we don't create a data catalog table for our completed file**
 
+Bucket access policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "*"
+            },
+            "Action": "*",
+            "Resource": [
+                "arn:aws:s3:::sandbox-wau-audit-logs",
+                "arn:aws:s3:::sandbox-wau-audit-logs/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "s3:DataAccessPointAccount": "502002958688"
+                }
+            }
+        }
+    ]
+}
+```
+
+Access point policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::543706083199:role/platform-sandbox2-account-AuditLogLambdaRole-GL50V4JQSXMT"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:us-west-2:502002958688:accesspoint/sandbox-wau-audit-logs-access-point",
+                "arn:aws:s3:us-west-2:502002958688:accesspoint/sandbox-wau-audit-logs-access-point/object/*"
+            ]
+        }
+    ]
+}
+```
 ### Redshift Serverless Instance
 
 #### ***Note: Redshift Serverless instances require at least 3 AZs. Ensure your VPC/subnets are configured appropriately or you will not be able to proceed with creating the instance.***
