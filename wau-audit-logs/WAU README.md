@@ -44,8 +44,11 @@
 
 - Create a new S3 bucket with two folders, one named csv and the other complete (or something else that indicates the audit log file aggregation process is finished).
 - **Having the two folders allows us to target the csv folder specifically in our crawler's S3 data source configuration so that we don't create a data catalog table for our completed file**
+- In order for the audit log CSV lambda to access the central S3 bucket, an [S3 access point](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html#access-points-delegating-control) must be created.
+- The CSV lambda role's policy needs a resource entry for the access point as well.
 
-Bucket access policy
+
+Bucket policy to delegate permissions to the access point
 ```json
 {
     "Version": "2012-10-17",
@@ -207,103 +210,3 @@ To work around this, the additional S3 folder, called complete above, was added 
 Note: if a file with the same name as an existing file is copied to S3, the last modified time will change and that file will be processed again on a subsequent Glue job invocation.
 
 - https://www.youtube.com/watch?v=UBhG_UMuFEo
-
-
-```python
-import os
-import time
-import datetime
-import csv
-import json
-from io import StringIO
-import logging
-import boto3
-from botocore.config import Config
-
-SECOND_PER_MIN = 60
-MS_PER_SEC = 1000
-
-# Setup logging. Beware that enabling DEBUG level logs produces a lot of output
-# from the boto3 and botocore libraries.
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('audit-log-lambda')
-logger.setLevel(logging.INFO)
-
-boto_clients = {}
-
-
-def get_client(name):
-    """
-    Helper function to get the desired boto client.
-
-    :param name: Name of the client to return, e.g. "ecs", "codedeploy"
-    """
-    client = boto_clients.get(name)
-
-    # As per https://boto3.amazonaws.com/v1/documentation/api/latest/guide/retries.html
-    # we increase the number attempts to deal with ThrottlingException seen during
-    # multiple calls to get_log_events().  This does exponential backoff.
-    config = Config(
-        retries={
-            'max_attempts': 25,
-            'mode': 'adaptive'
-        }
-    )
-
-    if client is None:
-        client = boto3.client(name, config=config)
-        boto_clients[name] = client
-    return client
-
-
-def csv_data():
-    """Write events to an in-memory CSV file and return it's file object, so we can handle
-    large files in RAM"""
-
-    # Using a StringIO object instead of writing to disk.  Lambda has a max tmp space of 512 MB
-    # but we can get a large amount of RAM if required, so use an in-memory file.  BytesIO would
-    # be ideal but the csv module writes strings.
-    tmp = StringIO()
-
-    # Using a dict to keep track of the ordered and unique keys present in all events.  Python dict
-    # keys are guaranteed to be ordered as of Python 3.7.
-    header_names = {'timestamp': None, 'customer': None}
-    
-    writer = csv.DictWriter(tmp, fieldnames=list(header_names.keys()))
-    writer.writeheader()
-    # S3 wants bytes so convert from string:
-    tmp.seek(0)
-    return bytes(tmp.getvalue(), encoding='utf-8')
-
-
-def write_csv(s3_client):
-    key = "csv"
-    body = csv_data()
-    
-    arn = "arn:aws:s3:us-west-2:502002958688:accesspoint/sandbox-wau-audit-logs-access-point"
-    
-    logger.info(f'writing audit log CSV object to S3 bucket: {arn}, key: {key}')
-    
-    s3_client.put_object(Body=body, Bucket=arn, Key=key)
-
-
-def main():
-    s3_client = get_client('s3')
-    write_csv(s3_client)
-
-
-def handler(event, context):
-    """
-    Entrypoint function for Lambda. Gets the Cloudwatch logs for the audit logs
-    from the past N minutes and writes an artifact to an S3 bucket.
-
-    :param event: The custom resource event. (unused)
-    :param context: Lambda context object passed in by AWS. (unused)
-    :return: None
-    """
-    try:
-        main()
-    except Exception as e:
-        logger.error(f'Caught unexpected error: {str(e)}')
-        raise
-```
