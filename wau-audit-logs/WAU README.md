@@ -78,6 +78,10 @@
 }
 ```
 
+- S3 Access Point Configuration
+  - get the Sandbox BUCKET policy JSON for access point permission delegation
+  - get sandbox bucket access point policy JSON 
+
 ### Glue data catalog for the audit log file and Redshift table schema
 
 - Create a single database that will contain the wau audit log file and Redshift table schemas.
