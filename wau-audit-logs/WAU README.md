@@ -45,7 +45,7 @@
 - Create a new S3 bucket with two folders, one named csv and the other complete (or something else that indicates the audit log file aggregation process is finished).
 - **Having the two folders allows us to target the csv folder specifically in our crawler's S3 data source configuration so that we don't create a data catalog table for our completed file**
 - In order for the audit log CSV lambda to access the central S3 bucket, an [S3 access point](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html#access-points-delegating-control) must be created.
-- The CSV lambda role's policy needs a resource entry for the access point as well.
+- The CSV lambda role's policy needs a resource entry for the access point as well. Currently, "*" is the only thing that seems to work. I have tried the access point's ARN and an *Access Denied* error is returned.
 
 
 Bucket policy to delegate permissions to the access point
