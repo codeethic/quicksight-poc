@@ -171,6 +171,8 @@ Access point policy
         - https://docs.aws.amazon.com/glue/latest/dg/glue-troubleshooting-errors.html#error-job-bookmarks-reprocess-data
       - I left the remaining properties set to their default values.
 
+      - Create a schedule for the Glue job on the Schedule tab.
+
 ### Glue Job Invocation Lambda
 
 ### Update: We no longer need this Lambda or the EventBridge trigger as we can schedule the Glue job directly.
