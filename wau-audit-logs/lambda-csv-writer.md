@@ -139,7 +139,7 @@ def csv_data(events, env_name):
 
     # Using a dict to keep track of the ordered and unique keys present in all events.  Python dict
     # keys are guaranteed to be ordered as of Python 3.7.
-    header_names = {'id': None, 'timestamp': None, 'customer': None}
+    header_names = {'unique_identifier': None, 'timestamp': None, 'customer': None}
     for event in events:
         message = event['message']['message'].copy()
         details = message['details']
@@ -159,7 +159,7 @@ def csv_data(events, env_name):
         timestamp = time.gmtime(event['timestamp'] / MS_PER_SEC)
         
         writer.writerow({
-            'id': uuid4(),
+            'unique_identifier': uuid.uuid4(),
             'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", timestamp),
             'customer': env_name,
             'event': message['event'],
