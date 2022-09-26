@@ -173,6 +173,8 @@ Access point policy
 
 ### Glue Job Invocation Lambda
 
+### Update: We no longer need this Lambda or the EventBridge trigger as we can schedule the Glue job directly.
+
 - Select the Lambda IAM role created above or allow the role to be auto-generated.
 - Code changes: The Glue job name if a different name is preferred.
 
@@ -181,7 +183,6 @@ import json
 import boto3
 
 def lambda_handler(event, context):
-   nexttask = event["Records"][0]["s3"]["object"]["key"]
    glueclient = boto3.client('glue')
    glueclient.start_job_run(JobName='populate-redshift-wau-audit-logs')
 ```
