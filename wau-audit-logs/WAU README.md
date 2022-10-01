@@ -8,43 +8,16 @@
 ## Required Changes to the Existing Process
 
 - Add the customer field to the csv.
-- Write the WAU audit log files, generated for each customer, to a new centralized S3 bucket in the same region/account as Glue and Redshift.
-- Create a Lambda to invoke the Glue job based on EventBridge (CloudWatch Events) trigger with a cron expression.
+- Write the WAU audit log files, generated for each customer, to a new centralized S3 bucket in the same region/account as Glue and Redshift. [AuditLogCsvLambda python](https://github.com/codeethic/quicksight-poc/blob/main/wau-audit-logs/lambda-csv-writer.md)
+- Add a new environment variable to the CSV Lambda that points to the central S3 bucket's access point called AUDIT_LOGS_ARTIFACT_ACCESS_POINT. The Lambda's python use this variable.
+- Update the Lambda's IAM role policy with a resource entry for the access point. Currently, "*" is the only thing that seems to work. I have tried the access point's ARN and an *Access Denied* error is returned.
 
 ## Configuration
 
-### IAM Role
-
-- Creation of the Lambda will create an IAM role automatically with the AWSLambdaBasicExecutionRole policy that will limit permissions per the JSON below. The downside is that it auto-generates a role name with a GUID appended which may not be desirable.
-- If you choose to explicitly create a new IAM role that the lambda function can assume, ensure you assign the required policies and permissions accordingly.
-- Required policies: AWSLambdaBasicExecutionRole, AWSGlueServiceRole.
-- Specific permissions for the AWSLambdaBasicExecutionRole
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "logs:CreateLogGroup",
-      "Resource": "arn:aws:logs:us-east-2:awsAccountNumber:*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": [
-        "arn:aws:logs:us-east-2:awsAccountNumber:log-group:/aws/lambda/invoke-wau-audit-logs-glue-job:*"
-      ]
-    }
-  ]
-}
-```
-
-### S3
+### Central S3 Bucket
 
 - Create a new S3 bucket with a folder named ***csv***.
 - In order for the audit log CSV lambda to access the central S3 bucket, an [S3 access point](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html#access-points-delegating-control) must be created.
-- The CSV lambda role's policy needs a resource entry for the access point as well. Currently, "*" is the only thing that seems to work. I have tried the access point's ARN and an *Access Denied* error is returned.
 
 Bucket policy to delegate permissions to the access point
 ```json
@@ -93,46 +66,75 @@ Access point policy
     ]
 }
 ```
+
+### Create new analytics-vpc
+- This may require a service quota limit increase which should only take a few minutes.
+- Must have at least 3 subnets/AZs to meet the minimum Redshift Serverless requirements.
+- Example subnet config
+  - VPC CIDR: 172.33.0.0/16
+  - Subnets:
+    - analytics-vpc-subnet-az1: 172.33.0.0/20
+    - analytics-vpc-subnet-az2: 172.33.16.0/20
+    - analytics-vpc-subnet-az3: 172.33.32.0/20
+
+- Configure the VPC's S3 gateway endpoint. Glue will require this for the S3 crawler.
+  - analytics-vpc-s3-gateway-endpoint
+    - ensure it's a gateway endpoint and configured in the appropriate region.
+
 ### Redshift Serverless Instance
 
 #### ***Note: Redshift Serverless instances require at least 3 AZs. Ensure your VPC/subnets are configured appropriately or you will not be able to proceed with creating the instance.***
 
 - https://docs.aws.amazon.com/redshift/latest/mgmt/serverless-workgroup-namespace.html
-- Some discussion is probably needed here such that we can create a meaningful workgroup and namespace configuration.
-  - The workgroup manages compute, networking, and security. It's also the level at which you connect via JDBC, etc.
-  - The namespace manages the data.
-- I used the default **_dev_** database but we need to be more deliberate with naming.
-- For the poc environment, the workgroup configuration utilized the the VPC, security group, and subnets associated with the RDS VPC. For the sake of the Citrine environment, I assume it will be the platform-vpc but that remains to be seen.
-- Create a wau_audit_logs, or something equally suitable, table in Redshift by using the create table from CSV option.
-- There is an IAM role involved - AmazonRedshiftAllCommandsFullAccess policy at a minimum. I need to take a closer look. The role was created automatically during the configuration process.
-- https://docs.aws.amazon.com/redshift/latest/gsg/serverless-first-time-setup.html
-  - Permissions required to use Amazon Redshift Serverless
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
+#### Create the Workgroup
+
+- The workgroup manages compute, networking, and security. It's also the level at which you connect via JDBC, etc.
+- The namespace manages the data.
+- Provide a meaningful workgroup name.
+- Use the analytics-vpc created about and its associated security group when configuring the workgroup.
+- Click the Next button to create the namespace for the workgroup.
+- Provide a meaningful name.
+- The default **_dev_** database name can not be changed.
+- Click customize admin user credentials
+  - username: admin
+  - password: generate or enter but retain this information in an appropriate location
+- [Permissions](https://docs.aws.amazon.com/redshift/latest/gsg/serverless-first-time-setup.html) 
+  - Click the Manage IAM role button
+  - Select Create IAM Role or create your own role and enure to apply the AmazonRedshiftAllCommandsFullAccess policy.
+    - IAM role on Sandbox: citrine-analytics-redshift with the AmazonRedshiftAllCommandsFullAccess policy.
+    - Permissions required to use Amazon Redshift Serverless (check the link above to see whether this is enough or just let Redshift create the IAM role).
+
+    ```json
     {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "redshift-serverless.amazonaws.com",
-          "redshift.amazonaws.com"
-        ]
-      },
-      "Action": "sts:AssumeRole"
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": [
+              "redshift-serverless.amazonaws.com",
+              "redshift.amazonaws.com"
+            ]
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
     }
-  ]
-}
-```
+    ```
+
+#### Create the database table
+
+- Create a wau_audit_logs, or something equally suitable, table in Redshift **_dev_** database by using the create table from CSV option. An updated CSV with the unique_identifier and customer columns will be required to ensure the table's schema is accurate.
 
 ### Glue data catalog for the audit log file and Redshift table schema
 
-- Create a single database that will contain the wau audit log file and Redshift table schemas.
+- Create a single database that will contain the wau audit log file and Redshift table schemas e.g. wau_audit_logs.
 - Create a Redshift connection.
   - I used a JDBC connection type, which can be gleaned from selecting the Redshift workgroup.
   - I used the username/password but a secret would be more appropriate.
 - Create a crawler with two data sources defined for the csv and the Redshift table.
+  - **Note:** Ensure the CSV and the Redshift table's schema are the latest so that the crawler creates the most current Glue data catalog schemas. We can always re-run the crawler but it's better to get it right the first time.
   - S3 data source:
     - Path: ensure the S3 data source path only includes the **_csv_** folder.
     - Subsequent crawler runs: Crawl all sub-folders.
@@ -171,11 +173,11 @@ Access point policy
         - https://docs.aws.amazon.com/glue/latest/dg/glue-troubleshooting-errors.html#error-job-bookmarks-reprocess-data
       - I left the remaining properties set to their default values.
 
-      - Create a schedule for the Glue job on the Schedule tab.
+      - Create a schedule for the Glue job on the Schedule tag e.g. Daily at midnight.
 
 ### Glue Job Invocation Lambda
 
-### Update: We no longer need this Lambda or the EventBridge trigger as we can schedule the Glue job directly.
+### **Update**: We no longer need this Lambda or the EventBridge trigger as we can schedule the Glue job directly.
 
 - Select the Lambda IAM role created above or allow the role to be auto-generated.
 - Code changes: The Glue job name if a different name is preferred.
