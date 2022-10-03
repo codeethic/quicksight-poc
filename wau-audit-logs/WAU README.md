@@ -7,9 +7,9 @@
 
 ## Required Changes to the Existing Process
 
-- Add the customer field to the csv.
+- Add the unique_identifier and customer fields to the csv.
 - Write the WAU audit log files, generated for each customer, to a new centralized S3 bucket in the same region/account as Glue and Redshift. [AuditLogCsvLambda python](https://github.com/codeethic/quicksight-poc/blob/main/wau-audit-logs/lambda-csv-writer.md)
-- Add a new environment variable to the CSV Lambda that points to the central S3 bucket's access point called AUDIT_LOGS_ARTIFACT_ACCESS_POINT. The Lambda's python use this variable.
+- Add a new environment variable to the CSV Lambda that points to the central S3 bucket's access point called AUDIT_LOGS_ARTIFACT_ACCESS_POINT. The Lambda's Python use this variable.
 - Update the Lambda's IAM role policy with a resource entry for the access point. Currently, "*" is the only thing that seems to work. I have tried the access point's ARN and an *Access Denied* error is returned.
 
 ## Configuration
@@ -101,7 +101,7 @@ Access point policy
   - password: generate or enter but retain this information in an appropriate location
 - [Permissions](https://docs.aws.amazon.com/redshift/latest/gsg/serverless-first-time-setup.html) 
   - Click the Manage IAM role button
-  - Select Create IAM Role or create your own role and enure to apply the AmazonRedshiftAllCommandsFullAccess policy.
+  - Select Create IAM Role or create your own role and ensure to apply the AmazonRedshiftAllCommandsFullAccess policy.
     - IAM role on Sandbox: citrine-analytics-redshift with the AmazonRedshiftAllCommandsFullAccess policy.
     - Permissions required to use Amazon Redshift Serverless (check the link above to see whether this is enough or just let Redshift create the IAM role).
 
@@ -132,7 +132,6 @@ Access point policy
 - Create a single database that will contain the wau audit log file and Redshift table schemas e.g. wau_audit_logs.
 - Create a Redshift connection.
   - I used a JDBC connection type, which can be gleaned from selecting the Redshift workgroup.
-  - I used the username/password but a secret would be more appropriate.
 - Create a crawler with two data sources defined for the csv and the Redshift table.
   - **Note:** Ensure the CSV and the Redshift table's schema are the latest so that the crawler creates the most current Glue data catalog schemas. We can always re-run the crawler but it's better to get it right the first time.
   - S3 data source:
